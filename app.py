@@ -1,48 +1,112 @@
+# app.py
 import streamlit as st
-from datetime import date, datetime
+from datetime import date
 from fpdf import FPDF
+import matplotlib.pyplot as plt
+import io
+import base64
+
+# Simulador de cálculo de percentiles (temporal)
+def calcular_percentil(valor, media, desviacion):
+    if valor < media - 2 * desviacion:
+        return "<P3"
+    elif valor > media + 2 * desviacion:
+        return ">P97"
+    else:
+        return f"P{int(50 + ((valor - media)/desviacion)*10):.0f}"
+
+# Gráfico de ejemplo con punto del paciente
+def generar_grafico(parametro, edad, valor):
+    edades = list(range(0, 25))
+    p3 = [media - 2 for media in range(30, 55)]
+    p50 = [media for media in range(30, 55)]
+    p97 = [media + 2 for media in range(30, 55)]
+
+    plt.figure()
+    plt.plot(edades, p3, label="P3", linestyle=":")
+    plt.plot(edades, p50, label="P50", linestyle="--")
+    plt.plot(edades, p97, label="P97", linestyle=":")
+    plt.scatter([edad], [valor], color="red", label="Paciente")
+    plt.xlabel("Edad corregida (meses)")
+    plt.ylabel(parametro)
+    plt.title(f"{parametro} - Curvas OMS (simulado)")
+    plt.legend()
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    return buf
 
 st.set_page_config(page_title="Evaluación Prematuros", layout="centered")
-
 st.title("🩺 Evaluación de Crecimiento en Prematuros")
 
-# Entrada de datos
-st.subheader("📋 Datos del paciente")
-fecha_nac = st.date_input("Fecha de nacimiento", format="YYYY-MM-DD")
-eg = st.text_input("Edad gestacional al nacer (ej: 34+1)")
-fecha_consulta = st.date_input("Fecha de consulta", format="YYYY-MM-DD")
-peso = st.number_input("Peso actual (kg)", 0.0, 15.0, step=0.01)
-talla = st.number_input("Talla actual (cm)", 0.0, 70.0, step=0.1)
-pc = st.number_input("Perímetro cefálico (cm)", 0.0, 50.0, step=0.1)
+# Formulario de entrada
+with st.form("datos_paciente"):
+    col1, col2 = st.columns(2)
+    with col1:
+        fecha_nac = st.date_input("📅 Fecha de nacimiento")
+        eg = st.text_input("🗓 Edad gestacional (ej. 34+1)")
+        sexo = st.selectbox("👶 Sexo", ["Niña", "Niño"])
+    with col2:
+        fecha_consulta = st.date_input("📅 Fecha de consulta")
+        peso = st.number_input("⚖️ Peso (kg)", 0.0, 10.0, step=0.01)
+        talla = st.number_input("📏 Talla (cm)", 30.0, 60.0, step=0.1)
+        pc = st.number_input("🧠 Perímetro cefálico (cm)", 20.0, 50.0, step=0.1)
+    submitted = st.form_submit_button("Generar informe")
 
-# Cálculos automáticos
-if eg and "+" in eg and st.button("Generar informe en PDF"):
+if submitted and eg and "+" in eg:
     semanas, dias = map(int, eg.split("+"))
-    edad_gestacional = semanas + dias / 7
+    eg_total = semanas + dias / 7
     edad_cronologica = (fecha_consulta - fecha_nac).days / 7
-    edad_postmenstrual = edad_gestacional + edad_cronologica
-    edad_corregida = edad_cronologica - (40 - edad_gestacional)
+    edad_postmenstrual = eg_total + edad_cronologica
+    edad_corregida = edad_cronologica - (40 - eg_total)
 
-    # Generar PDF
+    # Percentiles simulados
+    peso_pct = calcular_percentil(peso, 4.5, 1.0)
+    talla_pct = calcular_percentil(talla, 54, 2.0)
+    pc_pct = calcular_percentil(pc, 37, 1.5)
+
+    # Mostrar resultados
+    st.markdown("### 📊 Resultados")
+    st.write(f"Edad corregida: {edad_corregida:.1f} semanas")
+    st.write(f"Edad postmenstrual: {edad_postmenstrual:.1f} semanas")
+    st.write(f"Peso: {peso} kg → {peso_pct}")
+    st.write(f"Talla: {talla} cm → {talla_pct}")
+    st.write(f"Perímetro cefálico: {pc} cm → {pc_pct}")
+
+    # Mostrar gráficos
+    st.markdown("### 📈 Gráficas")
+    graficos = {}
+    for parametro, valor in zip(["Peso (kg)", "Talla (cm)", "Perímetro cefálico (cm)"], [peso, talla, pc]):
+        grafico = generar_grafico(parametro, edad_corregida/4.3, valor)
+        graficos[parametro] = grafico
+        st.image(grafico, caption=f"{parametro}")
+
+    # PDF
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-
-    pdf.cell(200, 10, txt="Informe de Evaluación - Crecimiento en Prematuros", ln=True, align='C')
+    pdf.cell(200, 10, txt="Informe de Evaluación – Prematuros", ln=True, align='C')
     pdf.ln(10)
+    pdf.cell(200, 10, txt=f"Sexo: {sexo}", ln=True)
     pdf.cell(200, 10, txt=f"Fecha de nacimiento: {fecha_nac}", ln=True)
-    pdf.cell(200, 10, txt=f"Edad gestacional al nacer: {eg}", ln=True)
-    pdf.cell(200, 10, txt=f"Fecha de la consulta: {fecha_consulta}", ln=True)
-    pdf.cell(200, 10, txt=f"Peso actual: {peso} kg", ln=True)
-    pdf.cell(200, 10, txt=f"Talla actual: {talla} cm", ln=True)
-    pdf.cell(200, 10, txt=f"Perímetro cefálico: {pc} cm", ln=True)
+    pdf.cell(200, 10, txt=f"Edad gestacional: {eg}", ln=True)
+    pdf.cell(200, 10, txt=f"Fecha de consulta: {fecha_consulta}", ln=True)
     pdf.ln(5)
-    pdf.cell(200, 10, txt=f"Edad cronológica: {edad_cronologica:.1f} semanas", ln=True)
     pdf.cell(200, 10, txt=f"Edad corregida: {edad_corregida:.1f} semanas", ln=True)
     pdf.cell(200, 10, txt=f"Edad postmenstrual: {edad_postmenstrual:.1f} semanas", ln=True)
+    pdf.cell(200, 10, txt=f"Peso: {peso} kg → {peso_pct}", ln=True)
+    pdf.cell(200, 10, txt=f"Talla: {talla} cm → {talla_pct}", ln=True)
+    pdf.cell(200, 10, txt=f"Perímetro cefálico: {pc} cm → {pc_pct}", ln=True)
 
-    st.success("✅ Informe generado correctamente")
+    # Insertar gráficas en el PDF
+    for parametro, grafico in graficos.items():
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt=f"{parametro}", ln=True)
+        grafico.seek(0)
+        with open(f"grafico_temp.png", "wb") as f:
+            f.write(grafico.read())
+        pdf.image("grafico_temp.png", x=10, y=30, w=180)
 
-    # Mostrar botón de descarga
     pdf_output = pdf.output(dest='S').encode('latin1')
     st.download_button("📥 Descargar informe PDF", pdf_output, file_name="informe_prematuro.pdf")
