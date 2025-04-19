@@ -98,15 +98,13 @@ if submitted and eg and "+" in eg:
     pdf.cell(200, 10, txt=f"Talla: {talla} cm → {talla_pct}", ln=True)
     pdf.cell(200, 10, txt=f"Perímetro cefálico: {pc} cm → {pc_pct}", ln=True)
 
-    # Insertar gráficas en el PDF
     for parametro, grafico in graficos.items():
         pdf.add_page()
         pdf.set_font("Arial", size=12)
         pdf.cell(200, 10, txt=f"{parametro}", ln=True)
         grafico.seek(0)
-        with open(f"grafico_temp.png", "wb") as f:
-            f.write(grafico.read())
-        pdf.image("grafico_temp.png", x=10, y=30, w=180)
+        img_base64 = base64.b64encode(grafico.getvalue()).decode('utf-8')
+        pdf.image(io.BytesIO(base64.b64decode(img_base64)), x=10, y=30, w=180)
 
     pdf_output = pdf.output(dest='S').encode('latin1')
     st.download_button("📥 Descargar informe PDF", pdf_output, file_name="informe_prematuro.pdf")
