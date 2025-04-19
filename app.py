@@ -42,11 +42,11 @@ st.title("🩺 Evaluación de Crecimiento en Prematuros")
 with st.form("formulario"):
     col1, col2 = st.columns(2)
     with col1:
-        fecha_nac = st.date_input("📅 Fecha de nacimiento (dd/mm/aaaa)")
+        fecha_nac = st.date_input("📅 Fecha de nacimiento")
         eg = st.text_input("🗓 Edad gestacional (ej. 34+1)")
         sexo = st.selectbox("👶 Sexo", ["Niña", "Niño"])
     with col2:
-        fecha_consulta = st.date_input("📅 Fecha de consulta (dd/mm/aaaa)")
+        fecha_consulta = st.date_input("📅 Fecha de consulta")
         peso = st.number_input("⚖️ Peso (kg)", 0.0, 10.0, step=0.01)
         talla = st.number_input("📏 Talla (cm)", 30.0, 60.0, step=0.1)
         pc = st.number_input("🧠 Perímetro cefálico (cm)", 20.0, 50.0, step=0.1)
