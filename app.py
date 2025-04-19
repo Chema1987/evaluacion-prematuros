@@ -66,9 +66,9 @@ if enviar and "+" in eg:
     st.subheader("📊 Resultados")
     st.write(f"Edad corregida: {edad_corregida:.1f} semanas")
     st.write(f"Edad postmenstrual: {edad_postmenstrual:.1f} semanas")
-    st.write(f"Peso: {peso} kg → {peso_pct}")
-    st.write(f"Talla: {talla} cm → {talla_pct}")
-    st.write(f"Perímetro cefálico: {pc} cm → {pc_pct}")
+    st.write(f"Peso: {peso} kg -> {peso_pct}")
+    st.write(f"Talla: {talla} cm -> {talla_pct}")
+    st.write(f"Perímetro cefálico: {pc} cm -> {pc_pct}")
 
     st.subheader("📈 Gráficas")
     graficos = {}
@@ -81,7 +81,7 @@ if enviar and "+" in eg:
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Informe de Evaluación – Prematuros", ln=True, align='C')
+    pdf.cell(200, 10, txt="Informe de Evaluacion - Prematuros", ln=True, align='C')
     pdf.ln(10)
     pdf.cell(200, 10, txt=f"Sexo: {sexo}", ln=True)
     pdf.cell(200, 10, txt=f"Fecha de nacimiento: {fecha_nac.strftime('%d/%m/%Y')}", ln=True)
@@ -90,11 +90,10 @@ if enviar and "+" in eg:
     pdf.ln(5)
     pdf.cell(200, 10, txt=f"Edad corregida: {edad_corregida:.1f} semanas", ln=True)
     pdf.cell(200, 10, txt=f"Edad postmenstrual: {edad_postmenstrual:.1f} semanas", ln=True)
-    pdf.cell(200, 10, txt=f"Peso: {peso} kg → {peso_pct}", ln=True)
-    pdf.cell(200, 10, txt=f"Talla: {talla} cm → {talla_pct}", ln=True)
-    pdf.cell(200, 10, txt=f"Perímetro cefálico: {pc} cm → {pc_pct}", ln=True)
+    pdf.cell(200, 10, txt=f"Peso: {peso} kg -> {peso_pct}", ln=True)
+    pdf.cell(200, 10, txt=f"Talla: {talla} cm -> {talla_pct}", ln=True)
+    pdf.cell(200, 10, txt=f"Perímetro cefálico: {pc} cm -> {pc_pct}", ln=True)
 
-    # Añadir gráficas al PDF
     for parametro, grafico in graficos.items():
         pdf.add_page()
         pdf.set_font("Arial", size=12)
@@ -104,5 +103,6 @@ if enviar and "+" in eg:
             f.write(img_bytes)
         pdf.image("grafico_temp.png", x=10, y=30, w=180)
 
-    pdf_bytes = pdf.output(dest="S").encode("latin1")
-    st.download_button("📥 Descargar informe PDF", pdf_bytes, file_name="informe_prematuro.pdf")
+    # Descargar PDF sin codificación especial
+    pdf_output = pdf.output(dest='S').encode("latin-1", errors="ignore")
+    st.download_button("📥 Descargar informe PDF", pdf_output, file_name="informe_prematuro.pdf")
