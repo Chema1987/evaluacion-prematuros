@@ -1,10 +1,8 @@
-# app.py
 import streamlit as st
 from datetime import date
 from fpdf import FPDF
 import matplotlib.pyplot as plt
 import io
-import base64
 
 # Simulador de cálculo de percentiles (temporal)
 def calcular_percentil(valor, media, desviacion):
@@ -15,7 +13,7 @@ def calcular_percentil(valor, media, desviacion):
     else:
         return f"P{int(50 + ((valor - media)/desviacion)*10):.0f}"
 
-# Gráfico de ejemplo con punto del paciente
+# Generar gráfico de percentiles
 def generar_grafico(parametro, edad, valor):
     edades = list(range(0, 25))
     p3 = [media - 2 for media in range(30, 55)]
@@ -39,7 +37,7 @@ def generar_grafico(parametro, edad, valor):
 st.set_page_config(page_title="Evaluación Prematuros", layout="centered")
 st.title("🩺 Evaluación de Crecimiento en Prematuros")
 
-# Formulario de entrada
+# Formulario
 with st.form("datos_paciente"):
     col1, col2 = st.columns(2)
     with col1:
@@ -65,32 +63,30 @@ if submitted and eg and "+" in eg:
     talla_pct = calcular_percentil(talla, 54, 2.0)
     pc_pct = calcular_percentil(pc, 37, 1.5)
 
-    # Mostrar resultados
-    st.markdown("### 📊 Resultados")
+    st.subheader("📊 Resultados")
     st.write(f"Edad corregida: {edad_corregida:.1f} semanas")
     st.write(f"Edad postmenstrual: {edad_postmenstrual:.1f} semanas")
     st.write(f"Peso: {peso} kg → {peso_pct}")
     st.write(f"Talla: {talla} cm → {talla_pct}")
     st.write(f"Perímetro cefálico: {pc} cm → {pc_pct}")
 
-    # Mostrar gráficos
-    st.markdown("### 📈 Gráficas")
+    st.subheader("📈 Gráficas")
     graficos = {}
     for parametro, valor in zip(["Peso (kg)", "Talla (cm)", "Perímetro cefálico (cm)"], [peso, talla, pc]):
         grafico = generar_grafico(parametro, edad_corregida/4.3, valor)
         graficos[parametro] = grafico
         st.image(grafico, caption=f"{parametro}")
 
-    # PDF
+    # Crear PDF
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, txt="Informe de Evaluación – Prematuros", ln=True, align='C')
     pdf.ln(10)
     pdf.cell(200, 10, txt=f"Sexo: {sexo}", ln=True)
-    pdf.cell(200, 10, txt=f"Fecha de nacimiento: {fecha_nac}", ln=True)
+    pdf.cell(200, 10, txt=f"Fecha de nacimiento: {fecha_nac.strftime('%d/%m/%Y')}", ln=True)
     pdf.cell(200, 10, txt=f"Edad gestacional: {eg}", ln=True)
-    pdf.cell(200, 10, txt=f"Fecha de consulta: {fecha_consulta}", ln=True)
+    pdf.cell(200, 10, txt=f"Fecha de consulta: {fecha_consulta.strftime('%d/%m/%Y')}", ln=True)
     pdf.ln(5)
     pdf.cell(200, 10, txt=f"Edad corregida: {edad_corregida:.1f} semanas", ln=True)
     pdf.cell(200, 10, txt=f"Edad postmenstrual: {edad_postmenstrual:.1f} semanas", ln=True)
@@ -101,10 +97,10 @@ if submitted and eg and "+" in eg:
     for parametro, grafico in graficos.items():
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt=f"{parametro}", ln=True)
-        grafico.seek(0)
-        img_base64 = base64.b64encode(grafico.getvalue()).decode('utf-8')
-        pdf.image(io.BytesIO(base64.b64decode(img_base64)), x=10, y=30, w=180)
+        pdf.cell(200, 10, txt=parametro, ln=True)
+        with open("grafico_temp.png", "wb") as f:
+            f.write(grafico.getvalue())
+        pdf.image("grafico_temp.png", x=10, y=30, w=180)
 
-    pdf_output = pdf.output(dest='S').encode('latin1')
+    pdf_output = pdf.output(dest="S").encode("latin1")
     st.download_button("📥 Descargar informe PDF", pdf_output, file_name="informe_prematuro.pdf")
